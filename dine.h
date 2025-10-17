@@ -1,1 +1,3 @@
-#include
+#ifndef NUM_PHILOSOPHERS
+#define NUM_PHILOSOPHERS 5
+#endif
