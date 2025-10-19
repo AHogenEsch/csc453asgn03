@@ -1,9 +1,17 @@
 #include "dine.h"
+#include <semaphore.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <pthread.h>
+
 #define EAT 1
 #define THINK 2
 #define CHANGING 0 
 
 int onOdds = 0;
+// A semaphore value of 1 means the fork is available.
+sem_t forkArray[NUM_PHILOSOPHERS];
 
 typedef struct philosopher_st {
     double pos;
@@ -11,14 +19,47 @@ typedef struct philosopher_st {
     int holding_lfork;
     int status;
 } phil;
-// assume NUM_PHILOSOPHERS
+
+void init_semaphores() {
+    int i;
+    for (i = 0; i < NUM_PHILOSOPHERS; i++) {
+        // sem_init(semaphore, pshared, value)
+        // pshared=0 means the semaphore is local to this process
+        // value=1 means the resource  is initially available
+        if (sem_init(&forkArray[i], 0, 1) != 0) {
+            perror("Semaphore initialization failed");
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+// P(s) or DOWN(s)
+void lock(sem_t sem){
+    // returns non zero on error
+    if (sem_wait(&forkArray[sem]) != 0) {
+        perror("Semaphore wait failed");
+    }
+}
+
+// V(s) or UP(s)
+void unlock(sem_t sem){
+    if (sem_post(&forkArray[sem]) != 0) {
+        perror("Semaphore wait failed");
+    }
+}
+
+void printStatus(){
+    int i = 0;
+    printf("|")
+    for(i = 0; i< NUM_PHILOSOPHERS; i++){
+        
+    }
+}
 
 main(char * argv, int argc){
     int i = 0;
-    int forkArray[NUM_PHILOSOPHERS] = (* int)malloc(sizeof(int) * NUM_PHILOSOPHERS);
-    memset(forkArray, 0, sizeof(int) * NUM_PHILOSOPHERS);
 
-    phil philArray[NUM_PHILOSOPHERS] = (phil)malloc(sizeof(int) * NUM_PHILOSOPHERS);    
+    phil philArray[NUM_PHILOSOPHERS] = (*phil)malloc(sizeof(int) * NUM_PHILOSOPHERS);    
     for(i = 0; i< NUM_PHILOSOPHERS; i++){
         philArray[i].pos = i + 0.5;
         philArray[i].holding_lfork = philArray[i].holding_rfork = philArray[i].status 0;
