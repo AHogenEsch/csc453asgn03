@@ -20,7 +20,9 @@ typedef struct philosopher_st {
     int status;
 } phil;
 
-void init_semaphores() {
+phil philArray[NUM_PHILOSOPHERS];
+
+void init_sems() {
     int i;
     for (i = 0; i < NUM_PHILOSOPHERS; i++) {
         // sem_init(semaphore, pshared, value)
@@ -48,11 +50,39 @@ void unlock(sem_t sem){
     }
 }
 
-void printStatus(){
+void printStatus(phil phil){
     int i = 0;
-    printf("|")
-    for(i = 0; i< NUM_PHILOSOPHERS; i++){
-        
+    printf("| ");
+    // edge case if phil is the first one at the table
+    if(phil.pos < 1){
+        if(phil.holding_lfork){
+            printf("1");
+        }
+        if(phil.holding_rfork){
+            printf("2");
+        }
+    }
+    for(i = 0; i < phil.pos ; i++){
+        if(phil.holding_lfork){
+            // if pos = 1.5, lfork = 1
+            printf("%d", i);
+        }
+    }
+    // i++ is now the rfork
+    if(phil.holding_rfork){
+        printf("%d", i);
+    }
+    for(i < NUM_PHILOSOPHERS; i++){
+        printf("|");
+    }
+    if(phil.status == EAT){
+        printf(" EAT   ");
+    }
+    else if(phil.status == THINK){
+        printf(" THINK ");
+    }
+    else{
+        printf("       ");
     }
 }
 
@@ -96,4 +126,4 @@ void forkCheck(phil *p){
     }
 }
 
-// implement semaphores
+// implement semaphore
