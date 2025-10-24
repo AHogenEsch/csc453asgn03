@@ -1,0 +1,4 @@
+August Hogen-Esch (ahogenes)
+If dine.c and dine.h are in the same directory as the makefile, then running 'make' should appropriately build. 
+You can run dine with the command ./dine <arg>, where arg is the number of eat cycles each philosopher will perform. 
+The macro NUM_PHILOSOPHERS defined in dine.h is the number of concurrennt philosophers, defaulted to 5.
