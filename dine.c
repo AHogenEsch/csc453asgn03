@@ -1,13 +1,13 @@
 #include "dine.h"
-#include <stdlib.h>     // for exit, strtol, random, srandom
-#include <unistd.h>     // for getpid (used in example)
-#include <pthread.h>    // for pthread_create, pthread_join, pthread_exit
-#include <string.h>     // for strerror
-#include <time.h>       // for struct timespec, nanosleep
-#include <sys/time.h>   // for gettimeofday
-#include <errno.h>      // for errno
+#include <stdlib.h>
+#include <unistd.h>
+#include <pthread.h>    
+#include <string.h>     
+#include <time.h>     
+#include <sys/time.h>
+#include <errno.h>
 
-// Global declarations (externed in dine.h)
+// Global declarations
 sem_t forkArray[NUM_PHILOSOPHERS];
 phil philArray[NUM_PHILOSOPHERS];
 sem_t status_mutex; // Mutex for synchronized status printing and state update
@@ -29,9 +29,8 @@ void dawdle() {
     }
 }
 
-/**
- * @brief Executes P(s) or DOWN(s) operation (sem_wait).
- */
+// Executes P(s) or DOWN(s) operation (sem_wait).
+ 
 void lock(sem_t *s_ptr) {
     if (sem_wait(s_ptr) != 0) {
         perror("Semaphore wait failed");
@@ -39,9 +38,8 @@ void lock(sem_t *s_ptr) {
     }
 }
 
-/**
- * @brief Executes V(s) or UP(s) operation (sem_post).
- */
+// Executes V(s) or UP(s) operation (sem_post).
+ 
 void unlock(sem_t *s_ptr) {
     if (sem_post(s_ptr) != 0) {
         perror("Semaphore post failed");
@@ -53,9 +51,9 @@ void unlock(sem_t *s_ptr) {
 
 void printHeader() {
     int i;
-    printf("+");
+    printf("|");
     for(i = 0; i < NUM_PHILOSOPHERS; i++) {
-        printf("-------------+");
+        printf("=============|");
     }
     printf("\n");
     
@@ -65,61 +63,60 @@ void printHeader() {
     }
     printf("\n");
     
-    printf("+");
+    printf("|");
     for(i = 0; i < NUM_PHILOSOPHERS; i++) {
-        printf("-------------+");
+        printf("=============|");
     }
     printf("\n");
 }
 
 /**
- * @brief Prints a status line showing the state and forks held by all philosophers.
- * NOTE: The status_mutex must be held by the caller when this function is invoked.
+ * Prints a status line showing the state and forks held by all philosophers.
+ * The status_mutex must be held by the caller when this function is invoked.
  */
 void printStatus(int changing_phil_id, const char *change_desc) {
-    int i;
+    int i, j;
     // Caller holds status_mutex, no internal locking/unlocking.
 
-    printf("|");
-    for(i = 0; i < NUM_PHILOSOPHERS; i++) {
-        phil *p = &philArray[i];
-
-        // Print Left Fork status (fork i)
-        if (p->holding_lfork) {
-            printf(" %d", p->lfork_idx);
-        } else {
-            printf("  ");
-        }
+    // for(k = 0; k < NUM_PHILOSOPHERS; k++){
         
-        // Print State
-        switch(p->status) {
-            case EAT:
-                printf("  Eat  ");
-                break;
-            case THINK:
-                printf(" Think ");
-                break;
-            case CHANGING:
-            default:
+        for(i = 0; i < NUM_PHILOSOPHERS; i++) {
+            phil *p = &philArray[i];
+            printf("| ");
+            for(j = 0; j < NUM_PHILOSOPHERS; j++){
+                if((p->lfork_idx == j) && p->holding_lfork){
+                    // if pos = 1.5, lfork = 1
+                    printf("%d", p->lfork_idx);
+                }
+                else if((p->rfork_idx == j) && p->holding_rfork){
+                    // if pos = 1.5, lfork = 1
+                    printf("%d", p->rfork_idx);
+                }
+                else{
+                    printf("-");
+                }
+            }
+            
+            if(p->status == EAT){
+                printf(" EAT   ");
+            }
+            else if(p->status == THINK){
+                printf(" THINK ");
+            }
+            else{
                 printf("       ");
-                break;
-        }
+            }
 
-        // Print Right Fork status (fork (i+1)%N)
-        if (p->holding_rfork) {
-            printf("%d ", p->rfork_idx);
-        } else {
-            printf("  ");
+            // printf("|");
         }
         
-        printf("|");
-    }
-    printf(" Change: P%c %s\n", 'A' + changing_phil_id, change_desc); 
+    printf("|\n");
+    // printf("| Change: P%c %s\n", 'A' + changing_phil_id, change_desc); 
 }
 
 // --- Main Philosopher Logic ---
 
-void *philosopher_cycle(void *arg) {
+void *phil_cycle(void *arg) {
     phil *p = (phil *)arg;
     int phil_id = p->id;
     
@@ -128,6 +125,7 @@ void *philosopher_cycle(void *arg) {
     
     sem_t *first_sem, *second_sem;
     int *first_flag, *second_flag;
+    // strings used for status debugging
     const char *first_name, *second_name;
 
     if (phil_id % 2 == 0) { // Even ID: Right fork (rfork) first
@@ -147,26 +145,27 @@ void *philosopher_cycle(void *arg) {
     }
 
     // Initial state: Start out hungry in CHANGING state
+    // Must lock status mutex before printing so no other process prints
     lock(&status_mutex);
     printStatus(phil_id, "starts hungry (CHANGING)"); 
     unlock(&status_mutex);
 
     while (p->cycles_left > 0) {
         
-        // --- 1. Thinking Period ---
+        // 1. Thinking Period
         lock(&status_mutex);
         p->status = THINK;
         printStatus(phil_id, "changed state to THINK");
         unlock(&status_mutex);
         dawdle();
         
-        // --- 2. Transitioning to Eat (CHANGING) ---
+        // 2. Transitioning to Eat (CHANGING)
         lock(&status_mutex);
         p->status = CHANGING;
         printStatus(phil_id, "changed state to CHANGING (hungry)");
         unlock(&status_mutex);
 
-        // --- 3. Picking up Forks (First Fork) ---
+        // 3. Picking up Forks (First Fork)
         lock(first_sem); 
         
         lock(&status_mutex);
@@ -174,7 +173,7 @@ void *philosopher_cycle(void *arg) {
         printStatus(phil_id, first_name);
         unlock(&status_mutex);
 
-        // --- 4. Picking up Forks (Second Fork) ---
+        // 4. Picking up Forks (Second Fork)
         lock(second_sem); 
         
         lock(&status_mutex);
@@ -182,25 +181,26 @@ void *philosopher_cycle(void *arg) {
         printStatus(phil_id, second_name);
         unlock(&status_mutex);
         
-        // --- 5. Eating Period ---
+        // 5. Eating Period
         lock(&status_mutex);
         p->status = EAT;
         printStatus(phil_id, "changed state to EAT");
         unlock(&status_mutex);
         dawdle();
 
-        // --- 6. Transitioning to Think (CHANGING) ---
+        // 6. Transitioning to Think (CHANGING)
         lock(&status_mutex);
         p->status = CHANGING;
         printStatus(phil_id, "changed state to CHANGING (putting down forks)");
         unlock(&status_mutex);
         
-        // --- 7. Setting down Forks (FIXED LOGIC) ---
+        // 7. Setting down Forks
         
         // Release the second fork acquired
         lock(&status_mutex); // Lock printer/state mutex FIRST
         *second_flag = 0;    // Update state flags
-        printStatus(phil_id, "sets down second fork"); // Log the consistent state
+        // Log the consistent state
+        printStatus(phil_id, "sets down second fork"); 
         unlock(second_sem); // Release fork semaphore LAST
         unlock(&status_mutex); // Release printer/state mutex
 
@@ -259,7 +259,8 @@ int main(int argc, char *argv[]) {
         long cycles_arg = strtol(argv[1], &endptr, 10);
         
         if (*endptr != '\0' || cycles_arg <= 0) {
-            fprintf(stderr, "Error: Invalid or non-positive integer for eat-think cycles.\n");
+            fprintf(stderr, \
+        "Error: Invalid or non-positive integer for eat-think cycles.\n");
             return EXIT_FAILURE;
         }
         eat_think_cycles = cycles_arg;
@@ -275,18 +276,23 @@ int main(int argc, char *argv[]) {
         philArray[i].holding_lfork = 0;
         philArray[i].holding_rfork = 0;
         philArray[i].lfork_idx = i;
+        // Edge case for last philosopher's right fork
         philArray[i].rfork_idx = (i + 1) % NUM_PHILOSOPHERS;
     }
 
+    // Create new thread for each philosopher
     for (i = 0; i < NUM_PHILOSOPHERS; i++) {
-        int res = pthread_create(&p_threads[i], NULL, philosopher_cycle, (void *)&philArray[i]);
+        int res = \
+    pthread_create(&p_threads[i], NULL, phil_cycle, (void *)&philArray[i]);
         if (res != 0) {
-            fprintf(stderr, "Error creating thread for philosopher %c: %s\n", 'A' + i, strerror(res));
+            fprintf(stderr, \
+    "Error creating thread for philosopher %c: %s\n", 'A' + i, strerror(res));
             destroy_sems();
             return EXIT_FAILURE;
         }
     }
 
+    // Waits for all threads to complete their cycles and terminates them.
     for (i = 0; i < NUM_PHILOSOPHERS; i++) {
         if (pthread_join(p_threads[i], NULL) != 0) {
             perror("pthread_join failed");
@@ -295,6 +301,7 @@ int main(int argc, char *argv[]) {
 
     destroy_sems();
 
-    fprintf(stderr, "\nAll philosophers finished their %ld cycle(s).\n", eat_think_cycles);
+    fprintf(stderr,\
+    "\nAll philosophers finished their %ld cycle(s).\n", eat_think_cycles);
     return EXIT_SUCCESS;
 }

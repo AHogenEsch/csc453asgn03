@@ -1,20 +1,17 @@
 #ifndef DINE_H
 #define DINE_H
 
-// Required for printf and other standard I/O
 #include <stdio.h> 
-// Required for the sem_t type
 #include <semaphore.h>
-// Required for general types like pthread_t
 #include <pthread.h>
 
-// Define NUM_PHILOSOPHERS, default to 5
+
 #ifndef NUM_PHILOSOPHERS
 #define NUM_PHILOSOPHERS 5
 #endif
 
 // States for philosophers
-#define CHANGING 0 // Has not yet acquired both forks or not yet set down both forks
+#define CHANGING 0 
 #define EAT 1
 #define THINK 2
 
@@ -43,6 +40,6 @@ void dawdle(); // Sleeps for a random amount of time
 // Global variables externed from dine.c
 extern sem_t forkArray[NUM_PHILOSOPHERS]; // Semaphores for forks
 extern phil philArray[NUM_PHILOSOPHERS];  // Array of philosopher states
-extern sem_t status_mutex;                // Mutex for synchronized printing/state updating
+extern sem_t status_mutex; // Mutex for synchronized printing/state updating
 
-#endif // DINE_H
+#endif
